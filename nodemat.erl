@@ -49,7 +49,7 @@ multserver() ->
   receive 
     {From, {M1,M2,R1,R2,C1,C2}} ->
       Aut = multiply(M1,M2,R1,R2,C1,C2, [], 1,1),
-      From ! {self(),Aut},
+      From ! {self(),Aut, node()},
       multserver();
     {From, done} ->
       From ! {self(),"Closed Mult Server"};
@@ -61,7 +61,7 @@ multserver() ->
 domultiply(Pid, M1,M2,R1,R2,C1,C2) ->
   Pid ! {self(), {M1,M2,R1,R2,C1,C2}},
   receive 
-    {Pid, Msg} -> Msg
+    {Pid, Msg, FromNode} -> {Msg, FromNode}
     % add delay here
   end.
 
@@ -84,4 +84,10 @@ start() ->
 
 % Test Commands
 % Ms = nodemat:startmultserver().
+% nodemat:domultiply(Ms, [1,0,0,4,5,6,7,8,9], [1,2,3,4,5,6,7,8,9], 3, 3, 3, 3).
+
+%Internode Commands
+% c(nodemat).
+% net_kernel:connect_node(two@Pandora).
+% Ms = spawn(two@Pandora,nodemat, multserver, []).
 % nodemat:domultiply(Ms, [1,0,0,4,5,6,7,8,9], [1,2,3,4,5,6,7,8,9], 3, 3, 3, 3).
