@@ -84,21 +84,48 @@ getSubMatrix(M, R, C, I, J, P, X, Y, SM) -> % assume I = J, P = no. of Processor
 
 startmultserver() ->
   spawn(?MODULE, multserver, []).
+
+% do  contention-free formula here
+% getCElement(M1,M2, R1, C1, R2, C2, P, I, J, K, Sum) -> % assume I = J, P = no. of Processors
+%      if 
+%         (K == sqrt(P)) ->
+%           Sum;
+%         (Y > YR) ->
+%            getSubMatrix(M, R, C, I, J, P, X+1, YL, SM);       
+%         true -> 
+%            A = nth(round(X)*C+round(Y)+1,M),
+%            getSubMatrix(M, R, C, I, J, P, X, Y+1, [A|SM])
+%      end.
   
 start() ->
     R1 = 8,
     C1 = 8,
-    R2 = 3,
-    C2 = 3,
+    R2 = 8,
+    C2 = 8,
     P = 4,    
     M1 = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64],
-    M2 = [1,2,3,4,5,6,7,8,9],
+    M2 = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64],
     printMat(M1,R1,C1,1),
-    I = 2,
-    J = 2,
+    I = 1,
+    J = 1,
     N = R1/sqrt(P),   
     Aut = getSubMatrix(M1,R1,C1,I,J,P, (I-1)*N, (J-1)*N, []),
-    io:fwrite("~w~n",[Aut]).
+    io:fwrite("~w~n",[Aut]),
+    I1 = 1,
+    J1 = 1+1,
+    Aut1 = getSubMatrix(M1,R1,C1,I1,J1,P, (I1-1)*N, (J1-1)*N, []),
+    io:fwrite("~w~n",[Aut1]),  
+
+    I2 = 1,
+    J2 = 1,
+    N = R2/sqrt(P),   
+    Aut2 = getSubMatrix(M2,R1,C1,I2,J2,P, (I2-1)*N, (J2-1)*N, []),
+    io:fwrite("~w~n",[Aut2]),
+    I3 = 1+1,
+    J3 = 1,
+    Aut3 = getSubMatrix(M1,R1,C1,I3,J3,P, (I3-1)*N, (J3-1)*N, []),
+    io:fwrite("~w~n",[Aut3]).
+
     % printMat(M2,R2,C2,1),
     % Aut = multiply(M1,M2,R1,R2,C1,C2, [], 1,1),
     % io:fwrite("~w~n",[Aut]).
