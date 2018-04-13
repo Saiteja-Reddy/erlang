@@ -1,16 +1,17 @@
 %% Doesn't check matrix sizes match but 
 %% not restricted to square matrices.
 %%
-%% Represent matrix as tuple of tuples.
+%% Taking P as a perfect square.
+%% 
+%% Represent matrix as a list.
 %% Doesn't use destructive assignment so building a
 %% matrix creates an awful lot of temporary lists.
 %%
-%% Usage: start from command line with
-%%     erlc mat.erl
-%%     erl -noinput -s mat start
 
 -module(nodemat). 
--export([reverse_create/1, start/0, printMat/4, multiply/9, multiplyRC/10, multserver/0, cijmultserver/0, domultiply/7, startmultserver/0, startcijmultserver/0, getSubMatrix/9, addMatrix/6, getCElement/13, getCIJ/10]). 
+-export([reverse_create/1, start/0, printMat/4, multiply/9, multiplyRC/10, multserver/0,
+ cijmultserver/0, domultiply/7, startmultserver/0, startcijmultserver/0, getSubMatrix/9,
+addMatrix/6, getCElement/13, getCIJ/10, runDistMatmul/12]). 
 -import(lists, [reverse/1, nth/2]).
 -import(math, [sqrt/1]).
 
@@ -69,7 +70,8 @@ domultiply(Pid, M1,M2,R1,R2,C1,C2) ->
 getCIJ(Pid, M1,M2,R1,R2,C1,C2, P, I, J) ->
   Pid ! {self(), {M1,M2,R1,R2,C1, C2, P, I, J}},
   receive 
-    {Pid, Msg, FromNode} -> {Msg, FromNode}
+    {Pid, Msg, FromNode} -> 
+    io:fwrite("~w from ~w~n",[Msg, FromNode])
     % add delay here
   end.
 
@@ -176,9 +178,20 @@ start() ->
     % halt(0).   
 
 
-% Test Commands
-% Ms = nodemat:startmultserver().
-% nodemat:domultiply(Ms, [1,0,0,4,5,6,7,8,9], [1,2,3,4,5,6,7,8,9], 3, 3, 3, 3).
+runDistMatmul(M1,M2,R1,R2,C1,C2, P, Nodes, Procs, X, Y, Z) ->
+    L = length(Nodes),
+    Max = round(sqrt(P)),
+    if
+      (X == Max + 1) ->
+        io:fwrite("Done~n"),
+        ok;
+      (Y == Max + 1) ->
+        runDistMatmul(M1,M2,R1,R2,C1,C2, P, Nodes, Procs, X+1, 1, (Z+1) rem L); 
+      true ->
+        io:fwrite("~w , ~w and ~w~n", [Z,X,Y]),
+        getCIJ(nth(Z+1,Procs), M1,M2,R1,R2,C1,C2, P, X, Y),
+        runDistMatmul(M1,M2,R1,R2,C1,C2, P, Nodes, Procs, X, Y+1, (Z+1) rem L)
+    end.
 
 %Internode Commands
 % c(nodemat).
@@ -188,7 +201,15 @@ start() ->
 
 %Internode Commands
 % c(nodemat).
-% net_kernel:connect_node(two@Pandora).
 % Ms = spawn(two@Pandora,nodemat, cijmultserver, []).
-% nodemat:getCIJ(Ms, M1,M2,R1,R2,C1,C2, P, 1, 1).
+% Ms1 = spawn(three@Pandora,nodemat, cijmultserver, []).
+% Procs = [Ms,Ms1].
+% R1 = 8,
+% C1 = 8,
+% R2 = 8,
+% C2 = 8,
+% P = 4,    
+% M1 = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64],
+% M2 = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64],
+% nodemat:runDistMatmul(M1,M2,R1,R2,C1,C2, P, nodes(), Procs, 1, 1, 0).
 
