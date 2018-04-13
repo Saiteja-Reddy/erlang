@@ -10,7 +10,7 @@
 %%     erl -noinput -s mat start
 
 -module(nodemat). 
--export([reverse_create/1, start/0, printMat/4, multiply/9, multiplyRC/10, multserver/0, domultiply/7, startmultserver/0, getSubMatrix/9, addMatrix/6, getCElement/13]). 
+-export([reverse_create/1, start/0, printMat/4, multiply/9, multiplyRC/10, multserver/0, cijmultserver/0, domultiply/7, startmultserver/0, startcijmultserver/0, getSubMatrix/9, addMatrix/6, getCElement/13, getCIJ/10]). 
 -import(lists, [reverse/1, nth/2]).
 -import(math, [sqrt/1]).
 
@@ -66,9 +66,33 @@ domultiply(Pid, M1,M2,R1,R2,C1,C2) ->
     % add delay here
   end.
 
+getCIJ(Pid, M1,M2,R1,R2,C1,C2, P, I, J) ->
+  Pid ! {self(), {M1,M2,R1,R2,C1, C2, P, I, J}},
+  receive 
+    {Pid, Msg, FromNode} -> {Msg, FromNode}
+    % add delay here
+  end.
+
+cijmultserver() ->
+  receive 
+    {From, {M1,M2,R1,R2,C1,C2, P, I, J}} ->
+      KL = round(sqrt(P)),
+      N = round(R1/sqrt(P)),   
+      Sum = reverse_create(N*N),
+      Aut = getCElement(M1,M2, R1, C1, R2, C2, KL, N, P, I, J, 0, Sum),
+      From ! {self(),Aut, node()},
+      cijmultserver();
+    {From, done} ->
+      From ! {self(),"Closed CIJ Mult Server"};
+      _ -> 
+      io:format("Unexpected Message!"),
+      cijmultserver()
+    end.
+
+
 getSubMatrix(M, R, C, I, J, P, X, Y, SM) -> % assume I = J, P = no. of Processors
   N = round(R/sqrt(P)),
-  XL = (I-1)*N,
+  % XL = (I-1)*N,
   XR = (I)*N-1,
   YL = (J-1)*N,
   YR = (J)*N-1,     
@@ -84,6 +108,9 @@ getSubMatrix(M, R, C, I, J, P, X, Y, SM) -> % assume I = J, P = no. of Processor
 
 startmultserver() ->
   spawn(?MODULE, multserver, []).
+
+startcijmultserver() ->
+  spawn(?MODULE, cijmultserver, []).
 
 addMatrix(M1,M2,C,R,X,SM) ->
    RM = [nth(X,M1) + nth(X,M2) | SM],
@@ -158,3 +185,10 @@ start() ->
 % net_kernel:connect_node(two@Pandora).
 % Ms = spawn(two@Pandora,nodemat, multserver, []).
 % nodemat:domultiply(Ms, [1,0,0,4,5,6,7,8,9], [1,2,3,4,5,6,7,8,9], 3, 3, 3, 3).
+
+%Internode Commands
+% c(nodemat).
+% net_kernel:connect_node(two@Pandora).
+% Ms = spawn(two@Pandora,nodemat, cijmultserver, []).
+% nodemat:getCIJ(Ms, M1,M2,R1,R2,C1,C2, P, 1, 1).
+
