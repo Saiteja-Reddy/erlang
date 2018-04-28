@@ -73,6 +73,8 @@ getCIJ(Pid, M1,M2,R1,R2,C1,C2, P, I, J) ->
     {Pid, Msg, FromNode} -> 
     io:fwrite("~w from ~w~n",[Msg, FromNode])
     % add delay here
+  after 6000 ->
+    io:fwrite("timeout from ~w~n",[Pid])
   end.
 
 cijmultserver() ->
@@ -81,6 +83,7 @@ cijmultserver() ->
       KL = round(sqrt(P)),
       N = round(R1/sqrt(P)),   
       Sum = reverse_create(N*N),
+      timer:sleep(5000),
       Aut = getCElement(M1,M2, R1, C1, R2, C2, KL, N, P, I, J, 0, Sum),
       From ! {self(),Aut, node()},
       cijmultserver();
@@ -189,27 +192,7 @@ runDistMatmul(M1,M2,R1,R2,C1,C2, P, Nodes, Procs, X, Y, Z) ->
         runDistMatmul(M1,M2,R1,R2,C1,C2, P, Nodes, Procs, X+1, 1, (Z+1) rem L); 
       true ->
         io:fwrite("~w , ~w and ~w~n", [Z,X,Y]),
-        getCIJ(nth(Z+1,Procs), M1,M2,R1,R2,C1,C2, P, X, Y),
+        spawn(?MODULE, getCIJ, [nth(Z+1,Procs), M1,M2,R1,R2,C1,C2, P, X, Y]),
+        % getCIJ(nth(Z+1,Procs), M1,M2,R1,R2,C1,C2, P, X, Y),
         runDistMatmul(M1,M2,R1,R2,C1,C2, P, Nodes, Procs, X, Y+1, (Z+1) rem L)
     end.
-
-%Internode Commands
-% c(nodemat).
-% net_kernel:connect_node(two@Pandora).
-% Ms = spawn(two@Pandora,nodemat, multserver, []).
-% nodemat:domultiply(Ms, [1,0,0,4,5,6,7,8,9], [1,2,3,4,5,6,7,8,9], 3, 3, 3, 3).
-
-%Internode Commands
-% c(nodemat).
-% Ms = spawn(two@Pandora,nodemat, cijmultserver, []).
-% Ms1 = spawn(three@Pandora,nodemat, cijmultserver, []).
-% Procs = [Ms,Ms1].
-% R1 = 8,
-% C1 = 8,
-% R2 = 8,
-% C2 = 8,
-% P = 4,    
-% M1 = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64],
-% M2 = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64],
-% nodemat:runDistMatmul(M1,M2,R1,R2,C1,C2, P, nodes(), Procs, 1, 1, 0).
-
