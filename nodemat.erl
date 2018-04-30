@@ -11,7 +11,7 @@
 -module(nodemat). 
 -export([reverse_create/1, start/0, printMat/4, multiply/9, multiplyRC/10, multserver/0,
  cijmultserver/0, domultiply/7, startmultserver/0, startcijmultserver/0, getSubMatrix/9,
-addMatrix/6, getCElement/13, getCIJ/10, runDistMatmul/11, getRowK/10]). 
+addMatrix/6, getCElement/13, getCIJ/11, runDistMatmul/12, getRowK/11]). 
 -import(lists, [reverse/1, nth/2]).
 -import(math, [sqrt/1]).
 
@@ -67,25 +67,26 @@ domultiply(Pid, M1,M2,R1,R2,C1,C2) ->
     % add delay here
   end.
 
-getCIJ(Pid, M1,M2,R1,R2,C1,C2, P, I, J) ->
+getCIJ(Pid, BPid, M1,M2,R1,R2,C1,C2, P, I, J) ->
   Pid ! {self(), {M1,M2,R1,R2,C1, C2, P, I, J}},
   receive 
     {Pid, Msg, FromNode} -> 
     io:fwrite("~w from ~w~n",[Msg, FromNode])
     % add delay here
   after 6000 ->
-    io:fwrite("timeout from ~w~n",[Pid])
+    io:fwrite("timeout from ~w~nUsing Backup ~w~n",[Pid,BPid]),
+    getRowK(BPid,BPid, M1,M2,R1,R2,C1,C2, P, I, J)
   end.
 
-getRowK(Pid, M1,M2,R1,R2,C1,C2, P, X, Y) ->
+getRowK(Pid, BPid, M1,M2,R1,R2,C1,C2, P, X, Y) ->
     Max = round(sqrt(P)),
     if
       (Y == Max + 1) ->
         ok; 
     true ->
       io:fwrite("~w , ~w and ~w~n", [Pid,X,Y]),
-      getCIJ(Pid, M1,M2,R1,R2,C1,C2, P, X, Y),
-      getRowK(Pid, M1,M2,R1,R2,C1,C2, P, X, Y+1)
+      getCIJ(Pid,BPid, M1,M2,R1,R2,C1,C2, P, X, Y),
+      getRowK(Pid,BPid, M1,M2,R1,R2,C1,C2, P, X, Y+1)
   end.
 
 cijmultserver() ->
@@ -191,7 +192,7 @@ start() ->
 
     % halt(0).   
 
-runDistMatmul(M1,M2,R1,R2,C1,C2, P, Nodes, Procs, X, Z) ->
+runDistMatmul(M1,M2,R1,R2,C1,C2, P, Nodes, Procs, BProcs, X, Z) ->
     L = length(Nodes),
     Max = round(sqrt(P)),
     if
@@ -200,22 +201,6 @@ runDistMatmul(M1,M2,R1,R2,C1,C2, P, Nodes, Procs, X, Z) ->
         ok;
       true ->
         io:fwrite("~w , ~w row~n", [Z,X]),
-        spawn(?MODULE, getRowK, [nth(Z+1,Procs), M1,M2,R1,R2,C1,C2, P, X, 1]),
-        runDistMatmul(M1,M2,R1,R2,C1,C2, P, Nodes, Procs, X+1, (Z+1) rem L)
+        spawn(?MODULE, getRowK, [nth(Z+1,Procs), nth(Z+1,BProcs) , M1,M2,R1,R2,C1,C2, P, X, 1]),
+        runDistMatmul(M1,M2,R1,R2,C1,C2, P, Nodes, Procs,BProcs, X+1, (Z+1) rem L)
     end.
-
-% runDistMatmul(M1,M2,R1,R2,C1,C2, P, Nodes, Procs, X, Y, Z) ->
-%     L = length(Nodes),
-%     Max = round(sqrt(P)),
-%     if
-%       (X == Max + 1) ->
-%         io:fwrite("Done~n"),
-%         ok;
-%       (Y == Max + 1) ->
-%         runDistMatmul(M1,M2,R1,R2,C1,C2, P, Nodes, Procs, X+1, 1, (Z+1) rem L); 
-%       true ->
-%         io:fwrite("~w , ~w and ~w~n", [Z,X,Y]),
-%         spawn(?MODULE, getCIJ, [nth(Z+1,Procs), M1,M2,R1,R2,C1,C2, P, X, Y]),
-%         % getCIJ(nth(Z+1,Procs), M1,M2,R1,R2,C1,C2, P, X, Y),
-%         runDistMatmul(M1,M2,R1,R2,C1,C2, P, Nodes, Procs, X, Y+1, (Z+1) rem L)
-%     end.
