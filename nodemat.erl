@@ -11,7 +11,7 @@
 -module(nodemat). 
 -export([reverse_create/1, start/0, printMat/4, multiply/9, multiplyRC/10, multserver/0,
  cijmultserver/0, domultiply/7, startmultserver/0, startcijmultserver/0, getSubMatrix/9,
-addMatrix/6, getCElement/13, getCIJ/11, runDistMatmul/12, getRowK/11]). 
+addMatrix/6, getCElement/13, getCIJ/11, runDistMatmul/12, getRowK/11, init_clear/6]). 
 -import(lists, [reverse/1, nth/2]).
 -import(math, [sqrt/1]).
 
@@ -71,7 +71,10 @@ getCIJ(Pid, BPid, M1,M2,R1,R2,C1,C2, P, I, J) ->
   Pid ! {self(), {M1,M2,R1,R2,C1, C2, P, I, J}},
   receive 
     {Pid, Msg, FromNode} -> 
-    io:fwrite("~w from ~w~n",[Msg, FromNode])
+    io:fwrite("SubMatrix (~w,~w) - ~w from ~w~n",[I,J,Msg, FromNode]),
+    {ok, S} = file:open("output.txt", [append]),
+    io:format(S,"(~w,~w) - ~w~n",[I,J,Msg]),
+    file:close(S)
     % add delay here
   after 6000 ->
     io:fwrite("timeout from ~w~nUsing Backup ~w~n",[Pid,BPid]),
@@ -191,6 +194,14 @@ start() ->
     printMat(NAut,R1,C1,1).
 
     % halt(0).   
+
+init_clear(R1,R2,C1,C2,P, Nodes) ->
+    L = length(Nodes),
+    {ok, S} = file:open("output.txt", write),
+    io:format(S,"-- Generated from Erlang --~n",[]),
+    io:format(S,"~wX~w~n",[R1,C1]),
+    io:format(S,"~wX~w~n",[L,P]),
+    file:close(S).
 
 runDistMatmul(M1,M2,R1,R2,C1,C2, P, Nodes, Procs, BProcs, X, Z) ->
     L = length(Nodes),
