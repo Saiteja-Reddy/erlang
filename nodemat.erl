@@ -11,7 +11,7 @@
 -module(nodemat). 
 -export([reverse_create/1, start/0, printMat/4, multiply/9, multiplyRC/10, multserver/0,
  cijmultserver/0, domultiply/7, startmultserver/0, startcijmultserver/0, getSubMatrix/9,
-addMatrix/6, getCElement/13, getCIJ/11, runDistMatmul/12, getRowK/11, init_clear/6]). 
+addMatrix/6, getCElement/13, getCIJ/11, runDistMatmul/12, getRowK/11, init_clear/6, fin_done/0]). 
 -import(lists, [reverse/1, nth/2]).
 -import(math, [sqrt/1]).
 
@@ -202,6 +202,12 @@ init_clear(R1,R2,C1,C2,P, Nodes) ->
     io:format(S,"~wX~w~n",[R1,C1]),
     io:format(S,"~wX~w~n",[L,P]),
     file:close(S).
+
+fin_done() ->
+  os:cmd("python parse.py"),
+  {C,D} = file:consult("erlin.txt"),
+  T = lists:nth(1,D),
+  printMat(T,8,8,1).
 
 runDistMatmul(M1,M2,R1,R2,C1,C2, P, Nodes, Procs, BProcs, X, Z) ->
     L = length(Nodes),
